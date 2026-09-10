@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import * as controller from '../controller/quests.controller.js';
+import { authenticateToken } from '../../auth/controller/auth.controller.js';
+const quests_router = Router();
+quests_router.get('/', controller.getQuests);
+quests_router.get('/cities', controller.getCities);
+quests_router.get('/:id', controller.questById);
+quests_router.use (authenticateToken);
+quests_router.post('/:id/completion', controller.questCompletion);
+export default quests_router;

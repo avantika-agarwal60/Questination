@@ -1,0 +1,30 @@
+[{
+  "id": "q1",
+  "name": "Ramnagar Fort",
+  "description": "...",
+  "lat": 25.2919,
+  "lng": 83.0161,
+  "xp": 150,
+  "qrCode": "RAMNAGAR-FORT-001",
+  "city": "Varanasi"
+},
+{
+  "id": "q2",
+  "name": "Imambara",
+  "description": "...",
+  "lat": 26.5209,
+  "lng": 80.5446,
+  "xp": 150,
+  "qrCode": "IMAMBARA-001",
+  "city": "Lucknow"
+},
+{
+  "id":"q3",
+  "name": "chikanworld",
+  "description": "...",
+  "lat":26.857129802051215,
+  "lng": 80.91109933427363,
+  "qrCode": "CHIKANWORLD_007",
+  "city": "Lucknow",
+  "xp": 250
+  }]

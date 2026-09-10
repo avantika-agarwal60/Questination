@@ -1,0 +1,17 @@
+[
+    {
+  "username": "name",
+  "email": "mail",
+  "hashedpassword": "$2b$10$q3rZkniHp/vgWhJfxhKiMeQoEPD4A2ThFVRXSW.2tdkzd//S38eFe",
+  "role": "admin",
+  "isActive": true
+},
+{
+  "username": "name2",
+  "email": "mail2",
+  "hashedpassword": "$2b$10$q3rZkniHp/vgWhJfxhKiMeQoEPD4A2ThFVRXSW.2tdkzd//S38eFe",
+  "role": "admin",
+  "isActive": true,
+  "id": 2
+}
+]

@@ -1,0 +1,24 @@
+{
+  "name": "sih",
+  "version": "1.0.0",
+  "description": "backend for tourism app",
+  "license": "ISC",
+  "author": "avantika",
+  "main": "",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx nodemon src/server.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "prisma": "^5.20.0"
+  }
+}
