@@ -5,4 +5,5 @@ const app= express();
 app.use(express.json());
 app.use("/auth", auth_router);
 app.use("/quests", quests_router);
+app.use("/quiz", quiz_router);
 export default app;
