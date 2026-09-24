@@ -10,7 +10,7 @@ datasource db {
 
 model cities {
   id                 String               @id
-  name               String @unique
+  name               String               @unique
   level_thresholds   Int[]
   quests             quests[]
   user_city_progress user_city_progress[]
@@ -56,6 +56,7 @@ model quests {
   cities             cities             @relation(fields: [city_id], references: [id])
   users              users              @relation(fields: [created_by], references: [id])
   quiz_questions     quiz_questions[]
+  quiz_attempts quiz_attempts[]
 }
 
 model quiz_questions {
@@ -110,4 +111,31 @@ model users {
   sellers                          sellers?
   site_contacts                    site_contacts?
   user_city_progress               user_city_progress[]
+  quiz_attempts quiz_attempts[]
+}
+model quiz_attempts {
+  id	String @id @default(uuid())	
+user_id	String	
+quest_id	String	
+attempt_number	Int @default(1)	
+lives_left	Int @default(4)	
+status	String @default("in_progress")	
+score	Int?	
+discount_percent	Int?	
+started_at	DateTime @default(now())	
+completed_at	DateTime?	
+  users   users   @relation(fields: [user_id], references: [id])
+  quests  quests  @relation(fields: [quest_id], references: [id])
+  quiz_answers quiz_answers[]
+
+@@unique([user_id, quest_id, attempt_number])
+}
+model quiz_answers {
+  id	String @id @default(uuid())	
+attempt_id	String
+question_id	String	
+selected_option	String	
+is_correct	Boolean	
+answered_at	DateTime @default(now())
+ quiz_attempts    quiz_attempts @relation(fields: [attempt_id], references: [id])
 }
