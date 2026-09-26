@@ -1,6 +1,7 @@
 import express from "express";
 import auth_router from "./auth/routes/auth.routes.js";
 import quests_router from "./quests/routes/quests.routes.js";
+import quiz_router from "./quiz/routes/quiz.routes.js";
 const app= express();
 app.use(express.json());
 app.use("/auth", auth_router);
