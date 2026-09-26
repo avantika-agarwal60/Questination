@@ -9,14 +9,17 @@ datasource db {
 }
 
 model cities {
-  id                 String               @id
-  name               String               @unique
-  level_thresholds   Int[]
-  max_level          Int                  @default(5)
-  craft_categories   craft_categories[]
-  quests             quests[]
-  sellers            sellers[]
-  user_city_progress user_city_progress[]
+  id                  String               @id
+  name                String               @unique
+  level_thresholds    Int[]
+  max_level           Int                  @default(5)
+  cities_jspine_url   String?              @unique
+  cities_jcover_url   String?              @unique
+  cities_stickers_url String[]
+  craft_categories    craft_categories[]
+  quests              quests[]
+  sellers             sellers[]
+  user_city_progress  user_city_progress[]
 }
 
 model completed_quests {
@@ -55,6 +58,7 @@ model quests {
   xp                 Int
   qr_code            String             @unique
   created_by         String
+  quests_badges_url  String?            @unique(map: "quests_quests_badges_key")
   completed_quests   completed_quests[]
   cities             cities             @relation(fields: [city_id], references: [id])
   users              users              @relation(fields: [created_by], references: [id])
