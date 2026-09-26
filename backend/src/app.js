@@ -9,21 +9,22 @@ import recommendationsRoutes from "./routes/recommendations.routes.cjs";
 import artisanRoutes from "./routes/artisan.routes.cjs";
 import quiz_router from "./quiz/routes/quiz.routes.js";
 import qr_router from "./qr-generation/routes/qr.routes.js";
-import cors from 'cors';
+import cors from "cors";
 
-const app= express();
+const app = express();
+
 app.use(express.json());
 app.use(cors());
+
 app.use("/auth", auth_router);
 app.use("/quests", quests_router);
-app.use("/quiz", quiz_router); 
+app.use("/quiz", quiz_router);
 
-// ADDED — your routes mounted
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/preferences", preferencesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/artisans", artisanRoutes);
 app.use("/api/qr", qr_router);
-app.use("/quiz", quiz_router);
+
 export default app;
