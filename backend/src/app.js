@@ -4,7 +4,7 @@ import quests_router from "./quests/routes/quests.routes.js";
 
 import sellerRoutes from "./routes/seller.routes.cjs";
 import couponRoutes from "./routes/coupon.routes.cjs";
-import preferencesRoutes from "./routes/preferences.routes.cjs";
+import preferencesRoutes from "./routes/preference.routes.cjs";
 import recommendationsRoutes from "./routes/recommendations.routes.cjs";
 import artisanRoutes from "./routes/artisan.routes.cjs";
 import quiz_router from "./quiz/routes/quiz.routes.js";
