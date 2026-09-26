@@ -1,5 +1,5 @@
 const prisma = require('../db/prismaClient.cjs');
-const { generateOtp, sendOtp } = require('../services/otp.service');
+const { generateOtp, sendOtp } = require('../services/otp-serivces.cjs');
 
 // POST /api/coupons/generate
 // Called when a user earns a coupon (quiz win or quest completion)
