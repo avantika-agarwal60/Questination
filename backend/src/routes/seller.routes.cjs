@@ -4,6 +4,7 @@ const {
   registerSeller,
   getSellerProfile,
   updateSellerProfile,
+  verifySellerCraft
 } = require('../controllers/seller.controller.cjs');
 
 router.post('/register', registerSeller);
