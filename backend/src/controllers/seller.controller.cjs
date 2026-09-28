@@ -11,7 +11,7 @@ async function registerSeller(req, res) {
 
   try {
     const seller = await prisma.sellers.create({
-      data: { id: userId, shop_name, description, tax_bracket_tier },
+      data: { id: userId, shop_name, description, tax_bracket_tier,address },
     });
     res.status(201).json(seller);
   } catch (err) {
@@ -36,7 +36,7 @@ async function updateSellerProfile(req, res) {
   try {
     const updated = await prisma.sellers.update({
       where: { id },
-      data: { shop_name, description, tax_bracket_tier },
+      data: { shop_name, description, tax_bracket_tier, address },
     });
     res.json(updated);
   } catch (err) {

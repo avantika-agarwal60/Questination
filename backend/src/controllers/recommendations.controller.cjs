@@ -21,7 +21,13 @@ async function getRecommendations(req, res) {
 
     const sellers = await prisma.sellers.findMany({
       where: { craft_category_id: { in: categoryIds } },
-      include: { craft_category: true },
+      select: {
+        id:true,
+        shop_name:true,
+        description:true,
+        address:true,
+        craft_category:{select:{name:true}}
+      },
     });
 
     res.json(sellers);
