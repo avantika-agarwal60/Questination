@@ -40,7 +40,7 @@ model coupons {
   seller_id                      String
   discount_percent               Int
   source                         String
-  code                           String?
+  otp                           String?
   redeemed                       Boolean   @default(false)
   redeemed_at                    DateTime?
   expires_at                     DateTime?
