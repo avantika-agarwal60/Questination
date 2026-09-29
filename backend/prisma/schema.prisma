@@ -123,6 +123,7 @@ model users {
   isActive                         Boolean              @default(true)
   createdAt                        DateTime             @default(now())
   Refresh_token                    String?              @map("Refresh token")
+  refresh_expiry                   DateTime?
   completed_quests                 completed_quests[]
   coupons_coupons_seller_idTousers coupons[]            @relation("coupons_seller_idTousers")
   coupons_coupons_user_idTousers   coupons[]            @relation("coupons_user_idTousers")
