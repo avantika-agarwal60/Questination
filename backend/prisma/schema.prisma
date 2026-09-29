@@ -122,7 +122,7 @@ model users {
   verificationStatus               String               @default("not_applicable")
   isActive                         Boolean              @default(true)
   createdAt                        DateTime             @default(now())
-  Refresh_token                    String?              @map("Refresh token")
+  Refresh_token                    String?              @map("Refresh_token")
   refresh_expiry                   DateTime?
   completed_quests                 completed_quests[]
   coupons_coupons_seller_idTousers coupons[]            @relation("coupons_seller_idTousers")
