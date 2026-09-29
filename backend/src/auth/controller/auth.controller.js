@@ -59,8 +59,19 @@ export async function login (req,res)
         const user= { username: foundUser.username, id: foundUser.id, role: foundUser.role, isActive: foundUser.isActive};
         const token= GenerateToken(user);
         const refreshtoken= jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '15d'});
-        foundUser.refreshtoken= refreshtoken;
-        return res.json({token: token, refreshtoken: refreshtoken});
+try {
+    await prisma.users.update({
+        where: { id: foundUser.id },
+        data: {
+            refreshtoken: refreshtoken,
+            refresh_expiry: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+        },
+    });
+} catch (err) {
+    console.error("failed to persist refresh token:", err);
+    return res.status(500).json({ message: "login failed" });
+}
+return res.json({token: token, refreshtoken: refreshtoken});
     }
 
     return res.status(401).json({
@@ -82,12 +93,23 @@ export async function refresh (req,res)
     });
     if (!foundUser || !foundUser.isActive)
         return res.status(401).json({message:"access has been revoked"});
-    jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, (err,user)=>{ 
+    jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, async (err,user)=>{ 
     if (err) return res.status(403).json({"message": "verification error"}); 
     user= {username: foundUser.username, id: foundUser.id, role: foundUser.role, isActive: foundUser.isActive};
-    refreshtoken=jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '15d'});
-    foundUser.refreshtoken= refreshtoken;
-    return res.json ({token: GenerateToken(user), refreshtoken: refreshtoken})});
+    const newRefreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '15d'});
+    try {
+        await prisma.users.update({
+            where: { id: foundUser.id },
+            data: {
+                refreshtoken: newRefreshToken,
+                refresh_expiry: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+            },
+        });
+    } catch (updateErr) {
+        console.error("failed to rotate refresh token:", updateErr);
+        return res.status(500).json({ message: "refresh failed" });
+    }
+    return res.json ({token: GenerateToken(user), refreshtoken: newRefreshToken})});
     
 }
 export async function authenticateToken (req,res,next)
@@ -104,6 +126,8 @@ export async function authenticateToken (req,res,next)
     });
     if (!foundUser || !foundUser.isActive)
         return res.status(401).json({message:"access has been revoked"});
+    if (foundUser.refresh_expiry && foundUser.refresh_expiry < new Date())
+    return res.status(401).json({message:"refresh token expired"});
     next();});
 }
 export async function revoke(req, res)
