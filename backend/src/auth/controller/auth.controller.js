@@ -94,7 +94,7 @@ export async function refresh (req,res)
     if (!foundUser || !foundUser.isActive)
         return res.status(401).json({message:"access has been revoked"});
     jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, async (err,user)=>{ 
-    if (err) return res.status(403).json({"message": "verification error"}); 
+    if (err) return res.status(401).json({"message": "verification error"}); 
     user= {username: foundUser.username, id: foundUser.id, role: foundUser.role, isActive: foundUser.isActive};
     const newRefreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '15d'});
     try {
@@ -118,7 +118,7 @@ export async function authenticateToken (req,res,next)
     const token=  authHeader && req.headers['authorization'].split(" ")[1];
     if (token==null) return res.status(401).json({"message": "token not found"});
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err,user)=>{ 
-    if (err) return res.status(403).json({message: "invalid token"});req.user=user;
+    if (err) return res.status(401).json({message: "invalid token"});req.user=user;
     const foundUser= await prisma.users.findUnique({
         where: {
             id: user.id,
