@@ -26,7 +26,7 @@ async function savePreferences(req, res) {
     await prisma.user_preferences.deleteMany({ where: { user_id: userId } });
 
     await prisma.user_preferences.createMany({
-      data: craftCategoryIds.map((craft_category_id) => ({ user_id: userId, craft_category_id })),
+      data: craftCategoryIds.map((craft_category_id) => ({ user_id: userId, craft_category_id: craft_category_id })),
     });
 
     res.status(201).json({ message: 'Preferences saved' });
