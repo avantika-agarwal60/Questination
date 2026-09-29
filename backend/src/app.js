@@ -31,3 +31,4 @@ app.use("/api/qr", qr_router);
 app.use("/api/journal", journalRoutes);
 
 export default app;
+

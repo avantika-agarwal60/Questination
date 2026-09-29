@@ -22,10 +22,87 @@ export async function getQuests(req,res)
 }
 export async function getCities(req,res)
 {
-    const cities= await prisma.cities.findMany();  
+    const cities= await prisma.cities.findMany({
+        include: {
+            quests: {
+                select: {
+                    lat: true,
+                    lng: true,
+                },
+            },
+        },
+    });
     if (cities.length===0)
         return res.status(404).json({message: "no cities found"});
     return res.status(200).json({cities: cities});
+}
+export async function createQuestPhotoUploadUrl(req, res) {
+    const {questId, fileName, contentType} = req.body;
+    const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const bucket = process.env.SUPABASE_QUEST_PHOTO_BUCKET || "quest-evidence";
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+    if (!questId || !fileName || !allowedTypes.has(contentType))
+        return res.status(400).json({message: "questId, fileName, and supported image contentType are required"});
+    if (!supabaseUrl || !serviceRoleKey)
+        return res.status(500).json({message: "quest photo storage is not configured"});
+
+    try {
+        const quest = await prisma.quests.findUnique({
+            where: {id: questId},
+            select: {id: true},
+        });
+        if (!quest)
+            return res.status(404).json({message: "quest not found"});
+
+        const safeQuestId = questId.replace(/[^A-Za-z0-9_-]/g, "_");
+        const safeFileName = fileName.replace(/[^A-Za-z0-9._-]/g, "_");
+        const objectPath = `${safeQuestId}/${crypto.randomUUID()}-${safeFileName}`;
+        const encodePath = value => value.split("/").map(encodeURIComponent).join("/");
+        const encodedBucket = encodeURIComponent(bucket);
+        const encodedPath = encodePath(objectPath);
+        const signResponse = await fetch(
+            `${supabaseUrl}/storage/v1/object/upload/sign/${encodedBucket}/${encodedPath}`,
+            {
+                method: "POST",
+                headers: {
+                    apikey: serviceRoleKey,
+                    Authorization: `Bearer ${serviceRoleKey}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({upsert: false}),
+            },
+        );
+        const signData = await signResponse.json();
+        if (!signResponse.ok) {
+            console.error("Supabase signed upload URL failed:", signData);
+            return res.status(502).json({message: "could not prepare quest photo upload"});
+        }
+
+        const signedPath = signData.signedURL || signData.signedUrl || signData.url;
+        let uploadUrl = null;
+        if (typeof signedPath === "string") {
+            uploadUrl = /^https?:\/\//i.test(signedPath)
+                ? signedPath
+                : signedPath.startsWith("/storage/v1/")
+                    ? `${supabaseUrl}${signedPath}`
+                    : `${supabaseUrl}/storage/v1/${signedPath.replace(/^\/+/, "")}`;
+        } else if (signData.token) {
+            uploadUrl = `${supabaseUrl}/storage/v1/object/upload/sign/${encodedBucket}/${encodedPath}?token=${encodeURIComponent(signData.token)}`;
+        }
+        if (!uploadUrl)
+            return res.status(502).json({message: "Supabase did not return an upload token"});
+
+        return res.status(200).json({
+            uploadUrl,
+            publicUrl: `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`,
+            path: objectPath,
+        });
+    } catch (error) {
+        console.error("Creating quest photo upload URL failed:", error);
+        return res.status(500).json({message: "could not prepare quest photo upload"});
+    }
 }
 export async function questById(req,res)
 {
@@ -46,7 +123,15 @@ export async function questCompletion(req,res)
     const questId=req.params.id;
     const {lat, lng, qr_code, photoUrl}= req.body;
     const userId=req.user.id;
-    if (!questId ||!userId || !lat || !lng || !qr_code || !photoUrl)
+    const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
+    const bucket = process.env.SUPABASE_QUEST_PHOTO_BUCKET || "quest-evidence";
+    const expectedPhotoPrefix = supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(bucket)}/`
+        : null;
+    if (!questId || !userId || lat == null || lng == null || !qr_code ||
+        typeof photoUrl !== "string" || !expectedPhotoPrefix ||
+        !photoUrl.startsWith(expectedPhotoPrefix) ||
+        photoUrl.length > 2048)
         return res.status(400).json({message: "missing required fields, quest incomplete"});
     const user= await prisma.users.findUnique({
         where: {
@@ -77,8 +162,6 @@ if (alreadyCompleted) {
         return res.status(400).json({message: "user is not at the quest location, quest incomplete"});
     if (qr_code!==quest.qr_code)
         return res.status(400).json({message: "invalid QR code, quest incomplete"});
-    if(!photoUrl)
-        return res.status(400).json({message: "photo evidence is required, quest incomplete"});
     const city= await prisma.cities.findUnique({
         where: {
             id: quest.city_id,
@@ -91,6 +174,7 @@ if (alreadyCompleted) {
             id: crypto.randomUUID(),
             user_id: userId,
             quest_id: questId,
+            photo_url: photoUrl,
         },
     });
 

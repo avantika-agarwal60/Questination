@@ -15,7 +15,6 @@ async function getCraftCategoriesByCity(req, res) {
 // POST /api/preferences
 // body: { userId, craftCategoryIds: [...] }  — min 1, no max
 async function savePreferences(req, res) {
-  const { userId, craftCategoryIds } = req.body;
   const userId = req.user.id;
   console.log('req.user:', req.user);       // TEMP
   console.log('userId:', userId);            // TEMP
@@ -42,3 +41,4 @@ async function savePreferences(req, res) {
 }
 
 module.exports = { getCraftCategoriesByCity, savePreferences };
+

@@ -16,7 +16,8 @@ async function getArtisansByCity(req, res) {
         id: true,
         shop_name: true,
         description: true,
-        craft_category: { select: { name: true } },   // include craft name via the relation now
+        address:true,
+        craft_categories: { select: { name: true } },   // include craft name via the relation now
       },
     });
 

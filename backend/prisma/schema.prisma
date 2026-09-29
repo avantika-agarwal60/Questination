@@ -27,6 +27,7 @@ model completed_quests {
   user_id      String
   quest_id     String
   completed_at DateTime @default(now())
+  photo_url    String?
   quests       quests   @relation(fields: [quest_id], references: [id])
   users        users    @relation(fields: [user_id], references: [id])
 
@@ -34,7 +35,7 @@ model completed_quests {
 }
 
 model coupons {
-  id                             String    @id
+  id                             String    @id @default(uuid())
   user_id                        String
   seller_id                      String
   discount_percent               Int
@@ -84,6 +85,9 @@ model sellers {
   tax_bracket_tier  String?
   craft_category_id String?
   city_id           String?
+  address           String?
+  udyam_id          String?
+  udyam_proof_url   String?
   cities            cities?           @relation(fields: [city_id], references: [id])
   craft_categories  craft_categories? @relation(fields: [craft_category_id], references: [id])
   users             users             @relation(fields: [id], references: [id])
@@ -118,6 +122,7 @@ model users {
   verificationStatus               String               @default("not_applicable")
   isActive                         Boolean              @default(true)
   createdAt                        DateTime             @default(now())
+  Refresh_token                    String?              @map("Refresh token")
   completed_quests                 completed_quests[]
   coupons_coupons_seller_idTousers coupons[]            @relation("coupons_seller_idTousers")
   coupons_coupons_user_idTousers   coupons[]            @relation("coupons_user_idTousers")
@@ -159,7 +164,7 @@ model quiz_answers {
 }
 
 model craft_categories {
-  id               String             @id
+  id               String             @id @default(uuid())
   name             String
   city_id          String
   cities           cities             @relation(fields: [city_id], references: [id])
@@ -170,13 +175,27 @@ model craft_categories {
 }
 
 model user_preferences {
-  id                String           @id
+  id                String           @id @default(dbgenerated("gen_random_uuid()"))
   user_id           String
   craft_category_id String
   craft_categories  craft_categories @relation(fields: [craft_category_id], references: [id])
   users             users            @relation(fields: [user_id], references: [id])
 
   @@unique([user_id, craft_category_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model journal_entries {
+  id         String   @id
+  user_id    String
+  quest_id   String
+  photo_urls String[]
+  caption    String?
+  sticker_id String?
+  created_at DateTime @default(now())
+  is_public  Boolean  @default(false)
+  quests     quests   @relation(fields: [quest_id], references: [id])
+  users      users    @relation(fields: [user_id], references: [id])
 }
 
 model quest_stickers {
@@ -189,6 +208,7 @@ model quest_stickers {
   quests      quests   @relation(fields: [quest_id], references: [id])
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ratings {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id     String   @db.Uuid
@@ -198,17 +218,4 @@ model ratings {
   review_text String?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
-}
-
-model journal_entries {
-  id         String   @id @default(uuid())
-  user_id    String
-  quest_id   String
-  photo_urls String[]
-  caption    String?
-  is_public  Boolean  @default(false) 
-  sticker_id String?
-  created_at DateTime @default(now())
-  quests     quests   @relation(fields: [quest_id], references: [id])
-  users      users    @relation(fields: [user_id], references: [id])
 }

@@ -3,6 +3,9 @@ const prisma = require('../db/prismaClient.cjs');
 // GET /api/recommendations/:userId
 async function getRecommendations(req, res) {
   const { userId } = req.params;
+  if (userId !== req.user.id) {
+    return res.status(403).json({ error: 'Cannot access another user recommendations' });
+  }
 
   try {
     const preferences = await prisma.user_preferences.findMany({
@@ -18,7 +21,13 @@ async function getRecommendations(req, res) {
 
     const sellers = await prisma.sellers.findMany({
       where: { craft_category_id: { in: categoryIds } },
-      include: { craft_category: true },
+      select: {
+        id:true,
+        shop_name:true,
+        description:true,
+        address:true,
+        craft_categories:{select:{name:true}}
+      },
     });
 
     res.json(sellers);
