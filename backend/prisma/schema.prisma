@@ -83,9 +83,11 @@ model sellers {
   shop_name         String
   description       String?
   tax_bracket_tier  String?
-  address           String?
   craft_category_id String?
   city_id           String?
+  address           String?
+  udyam_id          String?
+  udyam_proof_url   String?
   cities            cities?           @relation(fields: [city_id], references: [id])
   craft_categories  craft_categories? @relation(fields: [craft_category_id], references: [id])
   users             users             @relation(fields: [id], references: [id])
@@ -120,6 +122,7 @@ model users {
   verificationStatus               String               @default("not_applicable")
   isActive                         Boolean              @default(true)
   createdAt                        DateTime             @default(now())
+  Refresh_token                    String?              @map("Refresh token")
   completed_quests                 completed_quests[]
   coupons_coupons_seller_idTousers coupons[]            @relation("coupons_seller_idTousers")
   coupons_coupons_user_idTousers   coupons[]            @relation("coupons_user_idTousers")
@@ -172,7 +175,7 @@ model craft_categories {
 }
 
 model user_preferences {
-  id                String           @id
+  id                String           @id @default(dbgenerated("gen_random_uuid()"))
   user_id           String
   craft_category_id String
   craft_categories  craft_categories @relation(fields: [craft_category_id], references: [id])
