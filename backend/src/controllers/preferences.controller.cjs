@@ -12,6 +12,7 @@ async function getCraftCategoriesByCity(req, res) {
   res.json(categories);
 }
 
+
 // POST /api/preferences
 // body: { userId, craftCategoryIds: [...] }  — min 1, no max
 async function savePreferences(req, res) {

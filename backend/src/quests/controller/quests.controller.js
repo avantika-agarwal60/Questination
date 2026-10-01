@@ -177,14 +177,10 @@ if (alreadyCompleted) {
             photo_url: photoUrl,
         },
     });
-
-    const result = await awardXp(userId, city.id, quest.xp);
-
-    if (result.success === true) {
-        return res.status(200).json({
-            message: `quest completed successfully. Congratulations! xp awarded: ${quest.xp}, current level in ${city.name}: ${result.cityProgress.level}`,
-        });
-    } else {
-        return res.status(500).json({ message: "quest completed but xp not awarded due to an internal error" });
-    }
+    return res.status(200).json({
+        message: "checks passed, spawn guide",
+        guide: {
+            arModelUrl: quest.ar_model_url,
+            dialogue: quest.guide_dialogue,
+        },});
 }

@@ -1,5 +1,6 @@
 import express from "express";
 import auth_router from "./auth/routes/auth.routes.js";
+import avatarRoutes from "./routes/avatar.routes.cjs";
 import quests_router from "./quests/routes/quests.routes.js";
 import ratingsRouter from "./ratings/routes/ratings.routes.js";
 import sellerRoutes from "./routes/seller.routes.cjs";
@@ -21,7 +22,7 @@ app.use("/auth", auth_router);
 app.use("/quests", quests_router);
 app.use("/quiz", quiz_router);
 app.use("/ratings", ratingsRouter);
-
+app.use("/api/avatars", avatarRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/preferences", preferencesRoutes);

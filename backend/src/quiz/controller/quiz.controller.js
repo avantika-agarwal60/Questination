@@ -1,18 +1,24 @@
 import { PrismaClient } from '@prisma/client';
 import crypto from "crypto";
 import { awardXp } from "../../xp/xp.service.js";
- 
+
 const prisma = new PrismaClient();
 
 const QUIZ_TIME_LIMIT_SECONDS = 120;
 const MAX_QUIZ_ATTEMPTS = 3;
 const MAX_LIVES = 4;
-export async function startQuiz(req, res) 
+const COINS_PER_CORRECT_ANSWER = 2; // ADDED
+
+export async function startQuiz(req, res)
 {
     const userId = req.user.id;
     const questId = req.params.questId;
+    const { photoUrl } = req.body; // ADDED — captured here, used later in finishQuiz
     if (!userId || !questId) {
         return res.status(400).json({ message: "missing required fields" });
+    }
+    if (!photoUrl) { // ADDED
+        return res.status(400).json({ message: "photoUrl is required" });
     }
     const quest = await prisma.quests.findUnique({
         where: {
@@ -58,7 +64,7 @@ export async function startQuiz(req, res)
                 options: true},
 });
 if (questions.length === 0) {
-    return res.status(404).json({ message: "no quiz questions found for this quest" }); 
+    return res.status(404).json({ message: "no quiz questions found for this quest" });
 }
 try {
     const newAttempt = await prisma.quiz_attempts.create({
@@ -68,6 +74,7 @@ try {
             id: crypto.randomUUID(),
             attempt_number: completedOrFailedAttemptsCount + 1,
             lives_left: MAX_LIVES,
+            photo_url: photoUrl, // ADDED
         },
     });
     return res.status(200).json({ message: "quiz started", attemptId: newAttempt.id, questions: questions, timeLimit: QUIZ_TIME_LIMIT_SECONDS, lives: MAX_LIVES, attempts_remaining: MAX_QUIZ_ATTEMPTS - newAttempt.attempt_number });
@@ -77,8 +84,10 @@ catch (error) {
     return res.status(500).json({ message: "internal server error" });
 }
 };
+
 export async function submitAnswer(req,res)
 {
+    // UNCHANGED — identical to her original
     const {attemptId, questionId, selectedOption}=req.body;
     const userId= req.user.id;
     if (!attemptId|| !selectedOption || !questionId)
@@ -119,7 +128,7 @@ export async function submitAnswer(req,res)
             return res.status(409).json({message: "question already answered"});
         }
         const isCorrect = selectedOption === question.correct_option;
-        try 
+        try
         {
             await prisma.quiz_answers.create({
                 data: {
@@ -153,6 +162,7 @@ export async function submitAnswer(req,res)
             return res.status(500).json({ message: "internal server error" });
         }
 }
+
 export async function finishQuiz(req,res)
 {
     const attemptId= req.params.attemptId;
@@ -160,14 +170,14 @@ export async function finishQuiz(req,res)
     if (!attemptId)
         return res.status(400).json({message: "missing required fields"});
 
-    
+
     const attempt = await prisma.quiz_attempts.findUnique({ where: { id: attemptId } });
     if (!attempt || attempt.user_id !== userId)
         return res.status(404).json({ message: "attempt not found" });
- 
+
     if (attempt.status === "completed")
         return res.status(400).json({ message: "attempt already finished" });
- 
+
      if (attempt.status === "failed" || attempt.status === "expired")
         return res.status(200).json({ message: "quiz ended", status: attempt.status, score: 0, discountPercent: 0 });
      const allAnswers = await prisma.quiz_answers.findMany({ where: { attempt_id: attemptId } });
@@ -190,8 +200,8 @@ export async function finishQuiz(req,res)
                 completed_at: new Date(),
             },
         });
- 
-        
+
+
         const priorCompleted = await prisma.quiz_attempts.findFirst({
             where: {
                 user_id: userId,
@@ -200,19 +210,40 @@ export async function finishQuiz(req,res)
                 id: { not: attemptId },
             },
         });
- 
+
         let xpResult = { success: true, cityProgress: null };
+        let coinsAwarded = 0; // ADDED
+
         if (!priorCompleted) {
             const quest = await prisma.quests.findUnique({ where: { id: attempt.quest_id } });
-    
-    const QUIZ_XP = 10; 
-            xpResult = await awardXp(userId, quest.city_id, QUIZ_XP);
-}
+
+            // CHANGED — was flat QUIZ_XP = 10, now uses the quest's actual xp
+            xpResult = await awardXp(userId, quest.city_id, quest.xp);
+
+            // ADDED — quest.coins + 2 per correct answer
+            coinsAwarded = (quest.coins ?? 0) + (correctAnswersCount * COINS_PER_CORRECT_ANSWER);
+
+            await prisma.$transaction([
+                prisma.users.update({
+                    where: { id: userId },
+                    data: { coins: { increment: coinsAwarded } },
+                }),
+                prisma.completed_quests.create({
+                    data: {
+                        id: crypto.randomUUID(),
+                        user_id: userId,
+                        quest_id: attempt.quest_id,
+                        photo_url: attempt.photo_url, // from startQuiz
+                    },
+                }),
+            ]);
+        }
         return res.status(200).json({
             message: "quiz completed",
             score,
             discountPercent,
             xpAwarded: !priorCompleted,
+            coinsAwarded, // ADDED
             cityProgress: xpResult.cityProgress,
         });
     } catch (err) {
