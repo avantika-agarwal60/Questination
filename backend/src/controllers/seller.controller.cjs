@@ -97,8 +97,8 @@ async function submitUdyamProof(req, res) {
 // Returns sellers whose linked user account is still awaiting verification
 async function getPendingSellers(req, res) {
   try {
-    const pending = await prisma.sellers.findMany({
-      where: { users: { verificationStatus: 'pending' } },
+    const PENDING = await prisma.sellers.findMany({
+      where: { users: { verificationStatus: 'PENDING' } },
       select: {
         id: true,
         shop_name: true,
@@ -114,7 +114,7 @@ async function getPendingSellers(req, res) {
       },
     });
 
-    res.json(pending);
+    res.json(PENDING);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch pending sellers' });
