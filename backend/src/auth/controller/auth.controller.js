@@ -63,7 +63,7 @@ try {
     await prisma.users.update({
         where: { id: foundUser.id },
         data: {
-            refreshtoken: refreshtoken,
+            Refresh_token: refreshtoken,
             refresh_expiry: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         },
     });
@@ -71,7 +71,7 @@ try {
     console.error("failed to persist refresh token:", err);
     return res.status(500).json({ message: "login failed" });
 }
-return res.json({token: token, refreshtoken: refreshtoken});
+return res.json({token: token, Refresh_token: refreshtoken});
     }
 
     return res.status(401).json({
@@ -84,7 +84,7 @@ export async function refresh (req,res)
     if (refreshtoken==null) return res.status(401).json({message: "refresh token not found"});
     const foundUser= await prisma.users.findUnique({
         where: {
-            refreshtoken: refreshtoken,
+            Refresh_token: refreshtoken,
         },
     });
     if (!foundUser)
@@ -94,14 +94,14 @@ export async function refresh (req,res)
     if (!foundUser || !foundUser.isActive)
         return res.status(401).json({message:"access has been revoked"});
     jwt.verify(refreshtoken, process.env.REFRESH_TOKEN_SECRET, async (err,user)=>{ 
-    if (err) return res.status(403).json({"message": "verification error"}); 
+    if (err) return res.status(401).json({"message": "verification error"}); 
     user= {username: foundUser.username, id: foundUser.id, role: foundUser.role, isActive: foundUser.isActive};
     const newRefreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '15d'});
     try {
         await prisma.users.update({
             where: { id: foundUser.id },
             data: {
-                refreshtoken: newRefreshToken,
+                Refresh_token: newRefreshToken,
                 refresh_expiry: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
             },
         });
@@ -109,7 +109,7 @@ export async function refresh (req,res)
         console.error("failed to rotate refresh token:", updateErr);
         return res.status(500).json({ message: "refresh failed" });
     }
-    return res.json ({token: GenerateToken(user), refreshtoken: newRefreshToken})});
+    return res.json ({token: GenerateToken(user), Refresh_token: newRefreshToken})});
     
 }
 export async function authenticateToken (req,res,next)
@@ -118,7 +118,7 @@ export async function authenticateToken (req,res,next)
     const token=  authHeader && req.headers['authorization'].split(" ")[1];
     if (token==null) return res.status(401).json({"message": "token not found"});
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err,user)=>{ 
-    if (err) return res.status(403).json({message: "invalid token"});req.user=user;
+    if (err) return res.status(401).json({message: "invalid token"});req.user=user;
     const foundUser= await prisma.users.findUnique({
         where: {
             id: user.id,

@@ -1,37 +1,51 @@
 const prisma = require('../db/prismaClient.cjs');
 
-// GET /api/avatars/items — full catalog, grouped by slot
+// GET /api/avatars/items — full catalog
 async function getAvatarItems(req, res) {
-  const items = await prisma.avatar_items.findMany();
-  res.json(items);
+  try {
+    const items = await prisma.avatar_items.findMany();
+    res.json(items);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch avatar items' });
+  }
 }
 
-// GET /api/avatars/me/:userId — current equipped config, coin balance, and owned items
+// GET /api/avatars/me — current user's equipped config, coins, owned items
 async function getMyAvatar(req, res) {
-  const { userId } = req.params;
+  const userId = req.user.id;
 
-  const user = await prisma.users.findUnique({
-    where: { id: userId },
-    select: { coins: true, avatar: true },
-  });
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { coins: true, avatar: true },
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const owned = await prisma.user_avatar_items.findMany({
-    where: { user_id: userId },
-    select: { item_id: true },
-  });
+    const owned = await prisma.user_avatar_items.findMany({
+      where: { user_id: userId },
+      select: { item_id: true },
+    });
 
-  res.json({
-    coins: user.coins,
-    equipped: user.avatar,
-    ownedItemIds: owned.map((o) => o.item_id),
-  });
+    res.json({
+      coins: user.coins,
+      equipped: user.avatar,
+      ownedItemIds: owned.map((o) => o.item_id),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch avatar' });
+  }
 }
 
-// PUT /api/avatars/me/:userId — equip items (must already be owned or default)
+// PUT /api/avatars/me — equip items (must be owned or default)
 async function saveEquippedAvatar(req, res) {
-  const { userId } = req.params;
-  const { avatar } = req.body; // e.g. { hair: "itemId", top: "itemId", ... }
+  const userId = req.user.id;
+  const { avatar } = req.body; // e.g. { hair: "itemId", outfit: "itemId", hat: "itemId" }
+
+  if (!avatar || typeof avatar !== 'object') {
+    return res.status(400).json({ error: 'avatar object is required' });
+  }
 
   try {
     const ownedIds = new Set(
@@ -59,10 +73,11 @@ async function saveEquippedAvatar(req, res) {
 
 // POST /api/avatars/purchase — spend coins to unlock an item
 async function purchaseAvatarItem(req, res) {
-  const { userId, itemId } = req.body;
+  const userId = req.user.id;
+  const { itemId } = req.body;
 
-  if (!userId || !itemId) {
-    return res.status(400).json({ error: 'userId and itemId are required' });
+  if (!itemId) {
+    return res.status(400).json({ error: 'itemId is required' });
   }
 
   try {

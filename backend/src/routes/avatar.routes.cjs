@@ -8,8 +8,8 @@ const {
 } = require('../controllers/avatar.controller.cjs');
 
 router.get('/items', getAvatarItems);
-router.get('/me/:userId', getMyAvatar);
-router.put('/me/:userId', saveEquippedAvatar);
+router.get('/me', getMyAvatar);
+router.put('/me', saveEquippedAvatar);
 router.post('/purchase', purchaseAvatarItem);
 
 module.exports = router;

@@ -1,8 +1,8 @@
 import express from "express";
 import auth_router from "./auth/routes/auth.routes.js";
 import avatarRoutes from "./routes/avatar.routes.cjs";
+import {authenticateToken} from "./auth/controller/auth.controller.js";
 import quests_router from "./quests/routes/quests.routes.js";
-import ratingsRouter from "./ratings/routes/ratings.routes.js";
 import sellerRoutes from "./routes/seller.routes.cjs";
 import couponRoutes from "./routes/coupon.routes.cjs";
 import preferencesRoutes from "./routes/preferences.routes.cjs";
@@ -10,26 +10,23 @@ import recommendationsRoutes from "./routes/recommendations.routes.cjs";
 import artisanRoutes from "./routes/artisan.routes.cjs";
 import quiz_router from "./quiz/routes/quiz.routes.js";
 import qr_router from "./qr-generation/routes/qr.routes.js";
-import cors from "cors";
 import journalRoutes from "./routes/journal.routes.cjs";
+import ratingsRouter from "./ratings/routes/ratings.routes.js";
+import cors from 'cors';
 
-const app = express();
-
+const app= express();
 app.use(express.json());
 app.use(cors());
-
 app.use("/auth", auth_router);
 app.use("/quests", quests_router);
 app.use("/quiz", quiz_router);
 app.use("/ratings", ratingsRouter);
-app.use("/api/avatars", avatarRoutes);
+app.use("/api/avatars", authenticateToken, avatarRoutes);
 app.use("/api/sellers", sellerRoutes);
 app.use("/api/coupons", couponRoutes);
-app.use("/api/preferences", preferencesRoutes);
-app.use("/api/recommendations", recommendationsRoutes);
+app.use("/api/preferences", authenticateToken, preferencesRoutes);
+app.use("/api/recommendations", authenticateToken, recommendationsRoutes);
 app.use("/api/artisans", artisanRoutes);
 app.use("/api/qr", qr_router);
-app.use("/api/journal", journalRoutes);
-
+app.use("/api/journal", authenticateToken, journalRoutes);
 export default app;
-

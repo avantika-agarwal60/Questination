@@ -1,11 +1,8 @@
-//import quests from "../routes/quests.json" with {"type": "json"};
 import { getDistanceKm } from "../../common/utils/geodistance.js";
-//import users from "../../auth/routes/users.json" with {"type": "json"};
-//import cities from "../../quests/routes/cities.json" with {"type": "json"};
-import { awardXp } from "../../xp/xp.service.js";
 import { PrismaClient } from '@prisma/client';
 import crypto from "crypto"
 const prisma = new PrismaClient();
+
 export async function getQuests(req,res)
 {
     const {city_id}=req.query;
@@ -20,6 +17,7 @@ export async function getQuests(req,res)
         return res.status(404).json({message: "no quests found in the specified city"});
     return res.status(200).json({quests: quests});
 }
+
 export async function getCities(req,res)
 {
     const cities= await prisma.cities.findMany({
@@ -36,6 +34,7 @@ export async function getCities(req,res)
         return res.status(404).json({message: "no cities found"});
     return res.status(200).json({cities: cities});
 }
+
 export async function createQuestPhotoUploadUrl(req, res) {
     const {questId, fileName, contentType} = req.body;
     const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
@@ -104,6 +103,7 @@ export async function createQuestPhotoUploadUrl(req, res) {
         return res.status(500).json({message: "could not prepare quest photo upload"});
     }
 }
+
 export async function questById(req,res)
 {
     const {id}=req.params;
@@ -118,6 +118,41 @@ export async function questById(req,res)
         return res.status(404).json({message: "quest not found"});  
     return res.status(200).json({quest: quest});
 }
+
+export async function questAccept(req, res) {
+    const questId = req.params.id;
+    const userId = req.user.id;
+    if (!questId || !userId)
+        return res.status(400).json({ message: "missing required fields" });
+
+    const quest = await prisma.quests.findUnique({ where: { id: questId } });
+    if (!quest)
+        return res.status(404).json({ message: "quest not found" });
+
+    const alreadyCompleted = await prisma.completed_quests.findFirst({
+        where: { user_id: userId, quest_id: questId },
+    });
+    if (alreadyCompleted)
+        return res.status(409).json({ message: "quest already completed" });
+
+    try {
+        const progress = await prisma.quest_progress.upsert({
+            where: { user_id_quest_id: { user_id: userId, quest_id: questId } },
+            update: {},
+            create: {
+                id: crypto.randomUUID(),
+                user_id: userId,
+                quest_id: questId,
+                status: "accepted",
+            },
+        });
+        return res.status(200).json({ message: "quest accepted", progress });
+    } catch (error) {
+        console.error("Error accepting quest:", error);
+        return res.status(500).json({ message: "internal server error" });
+    }
+}
+
 export async function questCompletion(req,res)
 {
     const questId=req.params.id;
@@ -149,6 +184,12 @@ export async function questCompletion(req,res)
 if (alreadyCompleted) {
     return res.status(409).json({ message: "quest already completed" });
 };
+    const progress = await prisma.quest_progress.findUnique({
+        where: { user_id_quest_id: { user_id: userId, quest_id: questId } },
+    });
+    if (!progress)
+        return res.status(400).json({ message: "quest not accepted yet" });
+
     const quest=await prisma.quests.findUnique({
         where: {
             id: questId,
@@ -169,18 +210,16 @@ if (alreadyCompleted) {
     });
     if (!city)
         return res.status(404).json({message: "city not found"});
-     await prisma.completed_quests.create({
-        data: {
-            id: crypto.randomUUID(),
-            user_id: userId,
-            quest_id: questId,
-            photo_url: photoUrl,
-        },
+
+    await prisma.quest_progress.update({
+        where: { user_id_quest_id: { user_id: userId, quest_id: questId } },
+        data: { status: "started", started_at: new Date(), photo_url: photoUrl },
     });
+
     return res.status(200).json({
         message: "checks passed, spawn guide",
         guide: {
-            arModelUrl: quest.ar_model_url,
             dialogue: quest.guide_dialogue,
-        },});
+        },
+    });
 }

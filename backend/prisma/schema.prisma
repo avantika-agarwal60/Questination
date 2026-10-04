@@ -40,10 +40,10 @@ model coupons {
   seller_id                      String
   discount_percent               Int
   source                         String
+  otp                            String?
   redeemed                       Boolean   @default(false)
   redeemed_at                    DateTime?
   expires_at                     DateTime?
-  otp                            String?
   users_coupons_seller_idTousers users     @relation("coupons_seller_idTousers", fields: [seller_id], references: [id])
   users_coupons_user_idTousers   users     @relation("coupons_user_idTousers", fields: [user_id], references: [id])
 }
@@ -61,7 +61,8 @@ model quests {
   created_by              String
   quests_badges_url       String?            @unique(map: "quests_quests_badges_key")
   monuments_illustrations String?
-  coins                   BigInt?
+  coins                   Int?
+  guide_dialogue          String?
   completed_quests        completed_quests[]
   journal_entries         journal_entries[]
   quest_stickers          quest_stickers?

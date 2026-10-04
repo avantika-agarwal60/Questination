@@ -83,7 +83,7 @@ async function submitUdyamProof(req, res) {
 async function getPendingSellers(req, res) {
   try {
     const pending = await prisma.sellers.findMany({
-      where: { user: { verification_status: 'pending' } },
+      where: { users: { verificationStatus: 'pending' } },
       select: {
         id: true,
         shop_name: true,
