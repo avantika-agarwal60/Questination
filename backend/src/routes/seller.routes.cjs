@@ -16,18 +16,17 @@ const {
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/register', registerSeller);
-router.get('/:id', getSellerProfile);
 
 router.use(authenticateToken);
-router.get('/pending', getPendingSellers);            // moved below auth: it exposes Udyam IDs
+router.get('/pending', getPendingSellers);
 router.get('/meta/cities', getCities);
 router.get('/meta/craft-categories', getCraftCategories);
+
+router.get('/:id', getSellerProfile);          // wildcard routes last
 router.put('/:id', updateSellerProfile);
 router.put('/:id/verify-craft', verifySellerCraft);
 router.put('/:id/verification', setVerificationStatus);
 router.post('/:id/udyam', upload.single('udyam_proof'), submitUdyamProof);
 router.get('/:id/udyam-proof-url', getUdyamProofUrl);
-
-
 
 module.exports = router;
