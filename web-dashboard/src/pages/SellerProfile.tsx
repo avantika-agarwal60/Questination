@@ -6,6 +6,11 @@ import { authFetch } from "../api/authFetch";
 
 const API_BASE = "https://questination-production-08b6.up.railway.app";
 
+async function readError(res: Response, fallback: string) {
+  const data = await res.json().catch(() => ({}));
+  return data.error ?? fallback;
+}
+
 function SellerProfile() {
   const [shopName, setShopName] = useState("");
   const [address, setAddress] = useState("");
@@ -14,116 +19,74 @@ function SellerProfile() {
   const [description, setDescription] = useState("");
   const [taxBracket, setTaxBracket] = useState("");
   const [saved, setSaved] = useState(false);
+  const [submittedForReview, setSubmittedForReview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSave() {
-    setLoading(true);
     setError("");
     setSaved(false);
+    setSubmittedForReview(false);
 
+    const userId = getUserId();
+    if (!userId) {
+      setError("Your session has expired. Please log in again.");
+      return;
+    }
+    if (!shopName.trim()) {
+      setError("Shop name is required.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const userId = getUserId();
-
-      if (!userId) {
-        // Keep the dashboard usable even if the session token is unavailable.
-        localStorage.setItem("questination_seller_profile", JSON.stringify({
-          shop_name: shopName,
-          description,
-          tax_bracket_tier: taxBracket,
-          address,
-          udyam_id: udyamId,
-        }));
-        setSaved(true);
-        return;
-      }
-
+      const sellerUrl = `${API_BASE}/api/sellers/${encodeURIComponent(userId)}`;
       const body = JSON.stringify({
         userId,
         shop_name: shopName,
         description,
         tax_bracket_tier: taxBracket,
         address,
-        udyam_id: udyamId,
       });
+      const jsonHeaders = { "Content-Type": "application/json" };
 
-      // Try the real API first. If the deployed backend rejects the seller
-      // create/update request, keep the profile usable for the deployed demo
-      // by saving the entered profile locally instead of showing an error.
-      let apiSaved = false;
-
-      try {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 3500);
-
-        const existingResponse = await authFetch(
-          `${API_BASE}/api/sellers/${encodeURIComponent(userId)}`,
-          { signal: controller.signal }
-        );
-
-        window.clearTimeout(timeout);
-        let response: Response;
-
-        if (existingResponse.ok) {
-          response = await authFetch(
-            `${API_BASE}/api/sellers/${encodeURIComponent(userId)}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body,
-            }
-          );
-        } else {
-          response = await authFetch(`${API_BASE}/api/sellers/register`, {
+      // 1. Create the seller profile, or update it if it already exists
+      const existing = await authFetch(sellerUrl);
+      const profileRes = existing.ok
+        ? await authFetch(sellerUrl, { method: "PUT", headers: jsonHeaders, body })
+        : await authFetch(`${API_BASE}/api/sellers/register`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: jsonHeaders,
             body,
           });
 
-          if (!response.ok) {
-            const updateResponse = await authFetch(
-              `${API_BASE}/api/sellers/${encodeURIComponent(userId)}`,
-              {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body,
-              }
-            );
-            if (updateResponse.ok) response = updateResponse;
-          }
-        }
-
-        apiSaved = response.ok;
-      } catch {
-        // Network/backend failure is intentionally handled by the local fallback.
+      if (!profileRes.ok) {
+        throw new Error(await readError(profileRes, "Could not save your profile."));
       }
 
-      localStorage.setItem("questination_seller_profile", JSON.stringify({
-        userId,
-        shop_name: shopName,
-        description,
-        tax_bracket_tier: taxBracket,
-        address,
-        udyam_id: udyamId,
-        savedAt: new Date().toISOString(),
-        syncedWithBackend: apiSaved,
-        idImageName: idImage?.name || "",
-      }));
+      // 2. Submit Udyam ID + photo. The backend marks the account as pending review.
+      if (udyamId.trim() && idImage) {
+        const form = new FormData();
+        form.append("udyam_id", udyamId.trim());
+        form.append("udyam_proof", idImage);
 
-      // Always give the user a successful save state so a backend issue cannot
-      // block deployment/demo use of the dashboard.
+        // No Content-Type header here: the browser sets the multipart boundary itself
+        const proofRes = await authFetch(`${sellerUrl}/udyam`, {
+          method: "POST",
+          body: form,
+        });
+
+        if (!proofRes.ok) {
+          throw new Error(
+            await readError(proofRes, "Profile saved, but the ID upload failed. Try again.")
+          );
+        }
+        setSubmittedForReview(true);
+      }
+
       setSaved(true);
-    } catch {
-      // Last-resort local save: the form must never end on a red error state.
-      localStorage.setItem("questination_seller_profile", JSON.stringify({
-        shop_name: shopName,
-        description,
-        tax_bracket_tier: taxBracket,
-        address,
-        udyam_id: udyamId,
-        idImageName: idImage?.name || "",
-      }));
-      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
@@ -173,8 +136,11 @@ function SellerProfile() {
           type="file"
           accept="image/*"
           onChange={(e) => setIdImage(e.target.files?.[0] || null)}
-          className="w-full text-sm mb-3"
+          className="w-full text-sm mb-1"
         />
+        <p className="text-xs text-gray-500 mb-3">
+          Add both your ID number and photo to apply for verification.
+        </p>
 
         <label className="block text-sm font-medium mb-1 text-gray-700">Description</label>
         <textarea
@@ -204,7 +170,11 @@ function SellerProfile() {
         {saved && (
           <div className="mt-5 flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-lg">
             <CheckCircle2 size={20} />
-            <span className="font-medium">Profile saved!</span>
+            <span className="font-medium">
+              {submittedForReview
+                ? "Profile saved and sent for verification."
+                : "Profile saved!"}
+            </span>
           </div>
         )}
       </div>
