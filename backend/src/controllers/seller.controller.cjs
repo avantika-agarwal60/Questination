@@ -3,8 +3,7 @@ const supabase = require('../db/supabaseClient.cjs');
 
 // POST /api/sellers/register
 // Assumes the user already exists in `users` (created via Firebase auth + Person 1's flow)
-async function registerSeller(req, res) {
-  const { userId, shop_name, description, tax_bracket_tier } = req.body;
+async function registerSeller(req, res) { const { userId, shop_name, description, tax_bracket_tier, address } = req.body;
 
   if (!userId || !shop_name) {
     return res.status(400).json({ error: 'userId and shop_name are required' });
@@ -20,6 +19,21 @@ async function registerSeller(req, res) {
     res.status(500).json({ error: 'Failed to register seller' });
   }
 }
+async function getCraftCategories(req, res) {
+  const { city_id } = req.query;
+  if (!city_id) return res.status(400).json({ error: 'city_id is required' });
+
+  try {
+    const categories = await prisma.craft_categories.findMany({
+      where: { city_id },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch craft categories' });
+  }
+}
 
 // GET /api/sellers/:id
 async function getSellerProfile(req, res) {
@@ -32,14 +46,19 @@ async function getSellerProfile(req, res) {
 // PUT /api/sellers/:id
 async function updateSellerProfile(req, res) {
   const { id } = req.params;
-  const { shop_name, description, tax_bracket_tier } = req.body;
+  const { shop_name, description, tax_bracket_tier, address } = req.body;
 
   try {
-    const updated = await prisma.sellers.update({
+    const [updated] = await prisma.$transaction([
+    prisma.sellers.update({
       where: { id },
-      data: { shop_name, description, tax_bracket_tier, address },
-    });
-    res.json(updated);
+      data: { udyam_id, udyam_proof_url: fileName },
+    }),
+    prisma.users.update({
+      where: { id },
+      data: { verificationStatus: 'pending' },
+    }),
+  ]);
   } catch (err) {
     res.status(404).json({ error: 'Seller not found' });
   }
@@ -93,6 +112,9 @@ async function getPendingSellers(req, res) {
         udyam_proof_url: true,
         craft_category_id: true,
         city_id: true,
+        cities: { select: { id: true, name: true } },
+        craft_categories: { select: { id: true, name: true } },
+        users: { select: { username: true, email: true } },
       },
     });
 
@@ -102,6 +124,36 @@ async function getPendingSellers(req, res) {
     res.status(500).json({ error: 'Failed to fetch pending sellers' });
   }
 }
+async function setVerificationStatus(req, res) {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['verified', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: "status must be 'verified' or 'rejected'" });
+  }
+
+  try {
+    const user = await prisma.users.update({
+      where: { id },
+      data: { verificationStatus: status },
+    });
+    res.json({ id: user.id, verificationStatus: user.verificationStatus });
+  } catch (err) {
+    res.status(404).json({ error: 'Seller not found' });
+  }
+}
+async function getCities(req, res) {
+  try {
+    const cities = await prisma.cities.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(cities);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch cities' });
+  }
+}
+
 
 // PUT /api/sellers/:id/verify-craft
 async function verifySellerCraft(req, res) {
@@ -159,4 +211,4 @@ async function getUdyamProofUrl(req, res) {
 }
 
 module.exports = { registerSeller,
-  getSellerProfile,updateSellerProfile,verifySellerCraft,getPendingSellers,submitUdyamProof,getUdyamProofUrl, };
+  getSellerProfile,updateSellerProfile,verifySellerCraft,getPendingSellers,submitUdyamProof,getUdyamProofUrl,setVerificationStatus, getCities, getCraftCategories  };
