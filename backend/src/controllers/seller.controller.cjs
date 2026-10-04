@@ -49,17 +49,13 @@ async function updateSellerProfile(req, res) {
   const { shop_name, description, tax_bracket_tier, address } = req.body;
 
   try {
-    const [updated] = await prisma.$transaction([
-    prisma.sellers.update({
+    const updated = await prisma.sellers.update({
       where: { id },
-      data: { udyam_id, udyam_proof_url: fileName },
-    }),
-    prisma.users.update({
-      where: { id },
-      data: { verificationStatus: 'pending' },
-    }),
-  ]);
+      data: { shop_name, description, tax_bracket_tier, address },
+    });
+    res.json(updated);
   } catch (err) {
+    console.error(err);
     res.status(404).json({ error: 'Seller not found' });
   }
 }
