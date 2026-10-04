@@ -82,7 +82,7 @@ export async function refresh (req,res)
 {
     let refreshtoken= req.body.refreshtoken;
     if (refreshtoken==null) return res.status(401).json({message: "refresh token not found"});
-    const foundUser= await prisma.users.findUnique({
+    const foundUser= await prisma.users.findFirst({
         where: {
             Refresh_token: refreshtoken,
         },
