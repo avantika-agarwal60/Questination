@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "../api/authFetch"; // adjust the path if this file lives in a subfolder
 
-// ---------- Config (adjust to your project) ----------
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-const getToken = () => localStorage.getItem("accessToken"); // wherever your admin JWT is stored
+const API_BASE = "https://questination-production-08b6.up.railway.app";
 
 // ---------- Types ----------
 type PendingSeller = {
@@ -24,12 +23,10 @@ type CraftCategory = { id: string; name: string };
 
 // ---------- API helper ----------
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${API_URL}/api/sellers${path}`, {
+  const res = await authFetch(`${API_BASE}/api/sellers${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
@@ -57,16 +54,18 @@ export default function ApprovalQueue() {
   useEffect(() => {
     (async () => {
       try {
-        const [pending, cityList] = await Promise.all([
-          api<PendingSeller[]>("/pending"),
-          api<City[]>("/meta/cities"),
-        ]);
-        setSellers(pending);
-        setCities(cityList);
+        setSellers(await api<PendingSeller[]>("/pending"));
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Failed to load applications");
       } finally {
         setLoading(false);
+      }
+
+      // Cities load separately so a missing /meta/cities route doesn't hide the queue
+      try {
+        setCities(await api<City[]>("/meta/cities"));
+      } catch {
+        setCities([]);
       }
     })();
   }, []);
