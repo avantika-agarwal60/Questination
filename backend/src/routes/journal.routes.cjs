@@ -8,7 +8,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024, files: 4 },
 });
 
-router.get('/:userId', getUserJournal);
 router.post('/', upload.array('photos', 4), createJournalEntry);
+router.get('/:userId', getUserJournal);
 
 module.exports = router;
