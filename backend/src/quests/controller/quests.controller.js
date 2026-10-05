@@ -152,7 +152,14 @@ export async function questAccept(req, res) {
         return res.status(500).json({ message: "internal server error" });
     }
 }
-
+export async function getCompletedQuests(req, res) {
+    const rows = await prisma.completed_quests.findMany({
+        where: { user_id: req.user.id },
+        include: { quests: true },
+        orderBy: { completed_at: 'asc' },
+    });
+    return res.status(200).json({ completedQuests: rows });
+}
 export async function questCompletion(req,res)
 {
     const questId=req.params.id;
