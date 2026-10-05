@@ -4,6 +4,7 @@ import { authenticateToken } from '../../auth/controller/auth.controller.js';
 const quests_router = Router();
 quests_router.get('/', controller.getQuests);
 quests_router.get('/cities', controller.getCities);
+quests_router.get('/completed', authenticateToken, controller.getCompletedQuests);
 quests_router.get('/:id', controller.questById);
 quests_router.use (authenticateToken);
 quests_router.post('/photo-upload-url', controller.createQuestPhotoUploadUrl);
